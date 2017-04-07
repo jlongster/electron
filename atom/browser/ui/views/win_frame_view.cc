@@ -23,6 +23,19 @@ WinFrameView::WinFrameView() {
 WinFrameView::~WinFrameView() {
 }
 
+gfx::Rect WinFrameView::GetBoundsForClientView() const {
+// We inset away the non-client area of maximized frameless windows in
+// AtomDesktopWindowTreeHostWin::GetClientAreaInsets(), but for whatever
+// reason 1px is still cut off from the client area on all sides. Lets fix
+// that here instead of in GetClientAreaInsets() to prevent the non-client
+// area from leaking through.
+  auto client_bounds = bounds();
+  if (window_ && !window_->has_frame() && window_->IsMaximized()) {
+    client_bounds.Inset(1, 1, 1, 1);
+  }
+
+  return client_bounds;
+}
 
 gfx::Rect WinFrameView::GetWindowBoundsForClientBounds(
     const gfx::Rect& client_bounds) const {

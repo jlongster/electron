@@ -33,11 +33,16 @@ bool AtomDesktopWindowTreeHostWin::HasNonClientView() const {
 bool AtomDesktopWindowTreeHostWin::GetClientAreaInsets(
     gfx::Insets* insets) const {
   if (!HasNonClientView()) {
-    const int x = display::win::ScreenWin::GetSystemMetricsForHwnd(
-        GetHWND(), SM_CXSIZEFRAME);
-    const int y = display::win::ScreenWin::GetSystemMetricsForHwnd(
-        GetHWND(), SM_CYSIZEFRAME);
-    *insets = gfx::Insets(y * 2, x * 2, y * 2, x * 2);
+    // Maximized windows are actually bigger than the screen, see:
+    // https://blogs.msdn.microsoft.com/oldnewthing/20120326-00/?p=8003
+    //
+    // We inset by the non-client area size to avoid cutting of the client
+    // area. Also see WinFrameView::GetBoundsForClientView().
+    const auto style = GetWindowLong(GetHWND(), GWL_STYLE) & ~WS_CAPTION;
+    const auto ex_style = GetWindowLong(GetHWND(), GWL_EXSTYLE);
+    RECT r = {};
+    AdjustWindowRectEx(&r, style, FALSE, ex_style);
+    *insets = gfx::Insets(abs(r.top), abs(r.left), abs(r.bottom), abs(r.right));
     return true;
   }
 
