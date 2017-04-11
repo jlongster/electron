@@ -26,27 +26,26 @@ bool AtomDesktopWindowTreeHostWin::PreHandleMSG(
   return delegate_->PreHandleMSG(message, w_param, l_param, result);
 }
 
-bool AtomDesktopWindowTreeHostWin::HasNonClientView() const {
-  return !IsMaximized() || HasFrame();
-}
-
 bool AtomDesktopWindowTreeHostWin::GetClientAreaInsets(
     gfx::Insets* insets) const {
-  if (!HasNonClientView()) {
+  const auto has_frame = HasFrame();
+  if (IsMaximized() && !has_frame) {
     // Maximized windows are actually bigger than the screen, see:
     // https://blogs.msdn.microsoft.com/oldnewthing/20120326-00/?p=8003
     //
     // We inset by the non-client area size to avoid cutting of the client
-    // area. Also see WinFrameView::GetBoundsForClientView().
+    // area. Despite this, there is still some overflow (1-3px) depending
+    // on the DPI and side.
     const auto style = GetWindowLong(GetHWND(), GWL_STYLE) & ~WS_CAPTION;
     const auto ex_style = GetWindowLong(GetHWND(), GWL_EXSTYLE);
     RECT r = {};
     AdjustWindowRectEx(&r, style, FALSE, ex_style);
-    *insets = gfx::Insets(abs(r.top), abs(r.left), abs(r.bottom), abs(r.right));
+
+    *insets = gfx::Insets(abs(r.top), abs(r.left), abs(r.bottom) - 2, abs(r.right));
     return true;
   }
 
-  return false;
+  return !has_frame;
 }
 
 }  // namespace atom
